@@ -1,7 +1,5 @@
 #!/bin/bash
 
-_kvstore_found=0
-
 kvstore_usage () {
   if [[ -n "$1" ]]; then
     echo "$1"
@@ -36,7 +34,7 @@ kvstore_usage () {
   echo '  $(kvstore shellinit)'
 }
 
-kvstore_path () {
+_path () {
   local file="$1"
   local dir="${KVSTORE_DIR:-$HOME/.kvstore}"
   mkdir -p "$dir"
@@ -47,7 +45,66 @@ kvstore_path () {
   fi
 }
 
-kvstore_each () {
+_lockfile () {
+  local lockfile="$1"
+  if type flock &>/dev/null; then
+    flock -x -w 5 "$lockfile"
+    return $?
+  elif type lockfile &>/dev/null; then
+    lockfile -1 -r 5 "$lockfile"
+    return $?
+  else
+    return 1
+  fi
+}
+
+_lock_then () {
+  local lockfile="$1"
+  local cmd="$2"
+  shift
+  shift
+  if [[ -z "$ns" ]]; then
+    echo "error: nothing to lock" &>2
+    return 1
+  fi
+  if ! _lockfile "$lockfile"; then
+    echo "error: could not aquire lock" &>2
+    return 2
+  fi
+  $cmd "$@"
+  local rv=$?
+  rm -f "$lockfile"
+  return $rv
+}
+
+_echo_v_if_k_match() {
+  local k="$1"
+  local v="$2"
+  local key="$3"
+  if [[ "$k" == "$key" ]]; then
+    found=1
+    echo "$v"
+  fi
+}
+
+_echo_kv () {
+  local k="$1"
+  local v="$2"
+  echo -n "$k"
+  echo -ne "\t"
+  echo "$v"
+}
+
+_echo_kv_if_k_nomatch() {
+  local k="$1"
+  local v="$2"
+  local key="$3"
+  if [[ "$k" != "$key" ]]; then
+    _echo_kv "$k" "$v"
+  fi
+}
+
+_each_file_kv () {
   local file="$1"
   local cmd="$2"
   shift
@@ -58,20 +115,48 @@ kvstore_each () {
     IFS="$OLDIFS"
     local k=$(echo "$line" | cut -f1)
     local v=$(echo "$line" | cut -f2)
-    found=1
     $cmd "$k" "$v" "$@"
   done
 }
 
+_kvstore_nonatomic_mv () {
+  local path="$1"
+  local key_from="$2"
+  local key_to="$3"
+  local val="$4"
+  local tmp="${path}.tmp"
+  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key_from" > "$tmp"
+  _echo_kv "$key_to" "$val" >> "$tmp"
+  mv -f "$tmp" "$path"
+}
+
+_kvstore_nonatomic_set () {
+  local path="$1"
+  local key="$2"
+  local val="$3"
+  local tmp="${path}.tmp"
+  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key" > "$tmp"
+  _echo_kv "$key" "$val" >> "$tmp"
+  mv -f "$tmp" "$path"
+}
+
+_kvstore_nonatomic_rm () {
+  local path="$1"
+  local key="$2"
+  local tmp="${path}.tmp"
+  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key" > "$tmp"
+  mv -f "$tmp" "$path"
+}
+
 kvstore_ls () {
   local ns="$1"
-  local dir=$(kvstore_path)
+  local dir=$(_path)
   if [[ -z "$ns" ]]; then
     for file in $dir/*; do
       basename "$file"
     done
   else
-    local path=$(kvstore_path $ns)
+    local path=$(_path $ns)
     if [[ ! -f "$path" ]]; then
       echo "Error: path not found: $path" >&2
       return 2
@@ -80,34 +165,67 @@ kvstore_ls () {
   fi
 }
 
-_echo_v_if_k() {
-  local k="$1"
-  local v="$2"
-  local key="$3"
-  if [[ "$k" == "$key" ]]; then
-    found=1
-    echo "$v"
-  fi
-}
-
 kvstore_get () {
   local ns="$1"
+  [[ -z "$ns" ]] && echo "Missing param: namespace" >&2 && return 1
   local key="$2"
-  if [[ -z "$ns" ]] || [[ -z "$key" ]]; then
-    kvstore_usage "Error: namespace or key missing" >&2
-    return 1
-  fi
-  local file="$(kvstore_path $ns)"
+  [[ -z "$key" ]] && echo "Missing param: key" >&2 && return 1
+  local file="$(_path $ns)"
   if [[ ! -f "$file" ]]; then
     echo "Error: namespace file not found: $ns" >&2
     return 2
   fi
-  local found=0
-  kvstore_each "$file" _echo_v_if_k "$key"
-  #if [[ "$?" != '0' ]]; then
-  #  echo "Key not found: $key" >&1
-  #  return 1
-  #fi
+  found=0
+  _each_file_kv "$file" _echo_v_if_k_match "$key"
+  if (( found == 0 )); then
+    echo "Error: key not found in namespace $ns: $key" >&2
+    return 1
+  fi
+}
+
+kvstore_set () {
+  local ns="$1"
+  [[ -z "$ns" ]] && echo "Missing param: namespace" >&2 && return 1
+  local key="$2"
+  [[ -z "$key" ]] && echo "Missing param: key" >&2 && return 1
+  local val="$3"
+  [[ -z "$val" ]] && echo "Missing param: value" >&2 && return 1
+  local path=$(_path "$ns")
+  touch "$path"
+  _lock_then "${path}.lock" _kvstore_nonatomic_set "$path" "$key" "$val"
+  return $?
+}
+
+kvstore_mv () {
+  local ns="$1"
+  [[ -z "$ns" ]] && echo "Missing param: namespace" >&2  && return 1
+  local key_from="$2"
+  [[ -z "$key_from" ]] && echo "Missing param: key_from" >&2  && return 1
+  local key_to="$3"
+  [[ -z "$key_to" ]] && echo "Missing param: key_to" >&2 && return 1
+  local val=$(kvstore_get "$ns" "$key_from")
+  if ! kvstore_get "$ns" "$key_from" >/dev/null; then
+    return 2
+  fi
+  if kvstore_get "$ns" "$key_to" &>/dev/null; then
+    echo "Error: destination key already exists: $key_to" >&2
+    return 3
+  fi
+  local path=$(_path "$ns")
+  _lock_then "${path}.lock" _kvstore_nonatomic_mv "$path" "$key_from" "$key_to" "$val"
+}
+
+
+kvstore_rm () {
+  local ns="$1"
+  [[ -z "$ns" ]] && echo "Missing param: namespace" >&2  && return 1
+  local key="$2"
+  [[ -z "$key" ]] && echo "Missing param: key to remove" >&2  && return 1
+  if ! kvstore_get "$ns" "$key" >/dev/null; then
+    return 2
+  fi
+  local path=$(_path "$ns")
+  _lock_then "${path}.lock" _kvstore_nonatomic_rm "$path" "$key"
 }
 
 kvstore_shellinit() {
@@ -154,10 +272,11 @@ complete -F _${ns}_kvstore_complete $cmd"
 kvstore () {
   local cmd="$1"
   if [[ -z "$cmd" ]]; then
-    kvstore_usage "Error: Command not specified" >&2
+    echo "Error: Command not specified" >&2
+    echo "kvstore -h to see usage" >&2
     return 1
   fi
-  declare -i local force=0
+  declare -i local found=0
   case "$cmd" in
     -h|--help)
       kvstore_usage
@@ -172,20 +291,14 @@ kvstore () {
       return $?
       ;;
     set)
-      echo "Unimplemented!" >&2
-      return 1
       kvstore_set "$2" "$3" "$4"
       return $?
       ;;
     rm)
-      echo "Unimplemented!" >&2
-      return 1
       kvstore_rm "$2" "$3"
       return $?
       ;;
     mv)
-      echo "Unimplemented!" >&2
-      return 1
       kvstore_mv "$2" "$3" "$4"
       return $?
       ;;
@@ -194,7 +307,8 @@ kvstore () {
       return 0
       ;;
     *)
-      kvstore_usage "Error: Unrecognized command: $cmd" >&2
+      echo "Error: Unrecognized command: $cmd" >&2
+      echo "kvstore -h to see usage" >&2
       return 1
       ;;
   esac
