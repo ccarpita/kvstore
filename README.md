@@ -1,4 +1,4 @@
-# kvstore [NOT FULLY IMPLEMENTED]
+# kvstore
 
 Simple file-based key-value store implemented in Bash
 
