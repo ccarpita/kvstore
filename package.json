@@ -1,0 +1,5 @@
+{
+  "name": "kvstore",
+  "description": "File-based key-value storage",
+  "install": "install -b kvstore.sh ${PREFIX:/usr/local/bin}/kvstore"
+}

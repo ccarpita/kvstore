@@ -172,14 +172,20 @@ kvstore () {
       return $?
       ;;
     set)
+      echo "Unimplemented!" >&2
+      return 1
       kvstore_set "$2" "$3" "$4"
       return $?
       ;;
     rm)
+      echo "Unimplemented!" >&2
+      return 1
       kvstore_rm "$2" "$3"
       return $?
       ;;
     mv)
+      echo "Unimplemented!" >&2
+      return 1
       kvstore_mv "$2" "$3" "$4"
       return $?
       ;;

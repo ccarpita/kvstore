@@ -1,6 +1,6 @@
-# kvstore
+# kvstore [NOT FULLY IMPLEMENTED]
 
-Simple file-based key-value storage for Bash scripts
+Simple file-based key-value store implemented in Bash
 
 # Installation
 
