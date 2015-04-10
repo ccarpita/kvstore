@@ -6,7 +6,7 @@ Simple file-based key-value store implemented in Bash
 
 Available as a [bpkg](bpkg.github.io)
 ```sh
-bpkg install carpita/kvstore
+bpkg install ccarpita/kvstore
 ```
 
 Or, simply copy kvstore.sh to `$MY_BIN_PATH/kvstore`
@@ -24,14 +24,17 @@ eval "$(kvstore shellinit)"
 $ kvstore set mykvfile key some_value
 
 $ kvstore ls
-> mykvfile
+mykvfile
+myotherkvfile
+urls
+favoritecommands
 
 $ kvstore ls mykvfile
-> key
+key
 
 $ kvstore get key
-> some_value
+some_value
 
 $ kvstore -h
-> ...Usage...
+# prints full usage info...
 ```
