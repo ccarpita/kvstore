@@ -15,6 +15,8 @@ kvstore_usage () {
   echo "    List kv stores (namespaces)"
   echo "  ls <namespace>"
   echo "    List keys in a namespace"
+  echo "  lsval <namespace>"
+  echo "    List values in a namespace"
   echo "  get <namespace> <key>"
   echo "    Get value of key"
   echo "  set <namespace> <key> <value>"
@@ -149,6 +151,12 @@ _kvstore_nonatomic_rm () {
 }
 
 kvstore_ls () {
+  local cutarg='-f1'
+  if [[ "$1" = '--val' ]]
+  then
+    cutarg='-f2'
+    shift
+  fi
   local ns="$1"
   local dir=$(_path)
   if [[ -z "$ns" ]]; then
@@ -161,7 +169,7 @@ kvstore_ls () {
       echo "Error: path not found: $path" >&2
       return 2
     fi
-    cat "$path" | cut -f1
+    cat "$path" | cut $cutarg
   fi
 }
 
@@ -284,6 +292,10 @@ kvstore () {
       ;;
     ls)
       kvstore_ls "$2"
+      return $?
+      ;;
+    lsval)
+      kvstore_ls --val "$2"
       return $?
       ;;
     get)
