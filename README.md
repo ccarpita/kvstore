@@ -38,3 +38,6 @@ some_value
 $ kvstore -h
 # prints full usage info...
 ```
+# LICENSE
+
+MIT - https://opensource.org/licenses/MIT
