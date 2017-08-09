@@ -33,7 +33,7 @@ kvstore_usage () {
   echo "Shell Initialization"
   echo "  For command completion, add the following to your shell profile:"
   echo "  # File: Shell Profile"
-  echo '  $(kvstore shellinit)'
+  echo "  \$(kvstore shellinit)"
 }
 
 _path () {
@@ -47,19 +47,6 @@ _path () {
   fi
 }
 
-_lockfile () {
-  local lockfile="$1"
-  if type flock &>/dev/null; then
-    flock -x -w 5 "$lockfile"
-    return $?
-  elif type lockfile &>/dev/null; then
-    lockfile -1 -r 5 "$lockfile"
-    return $?
-  else
-    return 1
-  fi
-}
-
 _lock_then () {
   local lockfile="$1"
   local cmd="$2"
@@ -69,14 +56,25 @@ _lock_then () {
     echo "error: nothing to lock" &>2
     return 1
   fi
-  if ! _lockfile "$lockfile"; then
-    echo "error: could not aquire lock" &>2
-    return 2
+  if type flock &>/dev/null; then
+    set -e
+    (
+      flock -w 5 -x 200
+      "$cmd" "$@"
+    ) 200>"$lockfile"
+    set +e
+    return
+  elif type shlock &>/dev/null; then
+    set -e
+    shlock -f "$lockfile" -p $$
+    $cmd "$@"
+    rm -f "$lockfile"
+    set +e
+    return
   fi
-  $cmd "$@"
-  local rv=$?
-  rm -f "$lockfile"
-  return $rv
+
+  echo "error: could not find 'flock' or 'shlock' in PATH.  This is needed to ensure kvstore integrity." >&2
+  return 1
 }
 
 _echo_v_if_k_match() {
@@ -158,18 +156,20 @@ kvstore_ls () {
     shift
   fi
   local ns="$1"
-  local dir=$(_path)
+  local dir
+  dir=$(_path)
   if [[ -z "$ns" ]]; then
     for file in $dir/*; do
       basename "$file"
     done
   else
-    local path=$(_path $ns)
+    local path
+    path=$(_path "$ns")
     if [[ ! -f "$path" ]]; then
       echo "Error: path not found: $path" >&2
       return 2
     fi
-    cat "$path" | cut $cutarg
+    cut $cutarg < "$path"
   fi
 }
 
@@ -178,7 +178,8 @@ kvstore_get () {
   [[ -z "$ns" ]] && echo "Missing param: namespace" >&2 && return 1
   local key="$2"
   [[ -z "$key" ]] && echo "Missing param: key" >&2 && return 1
-  local file="$(_path $ns)"
+  local file
+  file=$(_path "$ns")
   if [[ ! -f "$file" ]]; then
     echo "Error: namespace file not found: $ns" >&2
     return 2
@@ -198,7 +199,8 @@ kvstore_set () {
   [[ -z "$key" ]] && echo "Missing param: key" >&2 && return 1
   local val="$3"
   [[ -z "$val" ]] && echo "Missing param: value" >&2 && return 1
-  local path=$(_path "$ns")
+  local path
+  path=$(_path "$ns")
   touch "$path"
   _lock_then "${path}.lock" _kvstore_nonatomic_set "$path" "$key" "$val"
   return $?
@@ -211,7 +213,8 @@ kvstore_mv () {
   [[ -z "$key_from" ]] && echo "Missing param: key_from" >&2  && return 1
   local key_to="$3"
   [[ -z "$key_to" ]] && echo "Missing param: key_to" >&2 && return 1
-  local val=$(kvstore_get "$ns" "$key_from")
+  local val
+  val=$(kvstore_get "$ns" "$key_from")
   if ! kvstore_get "$ns" "$key_from" >/dev/null; then
     return 2
   fi
@@ -219,7 +222,8 @@ kvstore_mv () {
     echo "Error: destination key already exists: $key_to" >&2
     return 3
   fi
-  local path=$(_path "$ns")
+  local path
+  path=$(_path "$ns")
   _lock_then "${path}.lock" _kvstore_nonatomic_mv "$path" "$key_from" "$key_to" "$val"
 }
 
@@ -232,7 +236,8 @@ kvstore_rm () {
   if ! kvstore_get "$ns" "$key" >/dev/null; then
     return 2
   fi
-  local path=$(_path "$ns")
+  local path
+  path=$(_path "$ns")
   _lock_then "${path}.lock" _kvstore_nonatomic_rm "$path" "$key"
 }
 
@@ -284,10 +289,9 @@ kvstore () {
     echo "kvstore -h to see usage" >&2
     return 1
   fi
-  declare -i local found=0
   case "$cmd" in
     -h|--help)
-      kvstore_usage
+      kvstore_usage "$@"
       return 0
       ;;
     ls)
