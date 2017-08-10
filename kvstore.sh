@@ -347,9 +347,3 @@ kvstore () {
 }
 kvstore "$@"
 exit $?
-
-## for emacs...
-## Local Variables:
-## sh-basic-offset: 2
-## sh-indentation: 2
-## End:
