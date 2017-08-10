@@ -155,7 +155,7 @@ kvstore_ls () {
   local dir
   dir=$(_kvstore_path)
   for file in $dir/*; do
-    basename "$file"
+    ! [[ "$file" =~ \.lock$ ]] && basename "$file"
   done
 }
 
@@ -296,6 +296,7 @@ kvstore () {
     echo "kvstore -h to see usage" >&2
     return 1
   fi
+  ## $2 is namespace, $3 is key, $4 is value
   case "$cmd" in
     -h|--help)
       kvstore_usage "$@"
