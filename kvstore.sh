@@ -36,7 +36,7 @@ kvstore_usage () {
   echo "  \$(kvstore shellinit)"
 }
 
-_path () {
+_kvstore_path () {
   local file="$1"
   local dir="${KVSTORE_DIR:-$HOME/.kvstore}"
   mkdir -p "$dir"
@@ -47,7 +47,7 @@ _path () {
   fi
 }
 
-_lock_then () {
+_kvstore_lock_then () {
   local lockfile="$1"
   local cmd="$2"
   shift
@@ -77,7 +77,7 @@ _lock_then () {
   return 1
 }
 
-_echo_v_if_k_match() {
+_kvstore_echo_v_if_k_match() {
   local k="$1"
   local v="$2"
   local key="$3"
@@ -87,7 +87,7 @@ _echo_v_if_k_match() {
   fi
 }
 
-_echo_kv () {
+_kvstore_echo_kv () {
   local k="$1"
   local v="$2"
   echo -n "$k"
@@ -95,16 +95,16 @@ _echo_kv () {
   echo "$v"
 }
 
-_echo_kv_if_k_nomatch() {
+_kvstore_echo_kv_if_k_nomatch() {
   local k="$1"
   local v="$2"
   local key="$3"
   if [[ "$k" != "$key" ]]; then
-    _echo_kv "$k" "$v"
+    _kvstore_echo_kv "$k" "$v"
   fi
 }
 
-_each_file_kv () {
+_kvstore_each_file_kv () {
   local file="$1"
   local cmd="$2"
   shift
@@ -125,8 +125,8 @@ _kvstore_nonatomic_mv () {
   local key_to="$3"
   local val="$4"
   local tmp="${path}.tmp"
-  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key_from" > "$tmp"
-  _echo_kv "$key_to" "$val" >> "$tmp"
+  _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key_from" > "$tmp"
+  _kvstore_echo_kv "$key_to" "$val" >> "$tmp"
   mv -f "$tmp" "$path"
 }
 
@@ -135,8 +135,8 @@ _kvstore_nonatomic_set () {
   local key="$2"
   local val="$3"
   local tmp="${path}.tmp"
-  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key" > "$tmp"
-  _echo_kv "$key" "$val" >> "$tmp"
+  _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key" > "$tmp"
+  _kvstore_echo_kv "$key" "$val" >> "$tmp"
   mv -f "$tmp" "$path"
 }
 
@@ -144,7 +144,7 @@ _kvstore_nonatomic_rm () {
   local path="$1"
   local key="$2"
   local tmp="${path}.tmp"
-  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key" > "$tmp"
+  _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key" > "$tmp"
   mv -f "$tmp" "$path"
 }
 
@@ -157,14 +157,14 @@ kvstore_ls () {
   fi
   local ns="$1"
   local dir
-  dir=$(_path)
+  dir=$(_kvstore_path)
   if [[ -z "$ns" ]]; then
     for file in $dir/*; do
       basename "$file"
     done
   else
     local path
-    path=$(_path "$ns")
+    path=$(_kvstore_path "$ns")
     if [[ ! -f "$path" ]]; then
       echo "Error: path not found: $path" >&2
       return 2
@@ -179,13 +179,13 @@ kvstore_get () {
   local key="$2"
   [[ -z "$key" ]] && echo "Missing param: key" >&2 && return 1
   local file
-  file=$(_path "$ns")
+  file=$(_kvstore_path "$ns")
   if [[ ! -f "$file" ]]; then
     echo "Error: namespace file not found: $ns" >&2
     return 2
   fi
   found=0
-  _each_file_kv "$file" _echo_v_if_k_match "$key"
+  _kvstore_each_file_kv "$file" _kvstore_echo_v_if_k_match "$key"
   if (( found == 0 )); then
     echo "Error: key not found in namespace $ns: $key" >&2
     return 1
@@ -200,9 +200,9 @@ kvstore_set () {
   local val="$3"
   [[ -z "$val" ]] && echo "Missing param: value" >&2 && return 1
   local path
-  path=$(_path "$ns")
+  path=$(_kvstore_path "$ns")
   touch "$path"
-  _lock_then "${path}.lock" _kvstore_nonatomic_set "$path" "$key" "$val"
+  _kvstore_lock_then "${path}.lock" _kvstore_nonatomic_set "$path" "$key" "$val"
   return $?
 }
 
@@ -223,8 +223,8 @@ kvstore_mv () {
     return 3
   fi
   local path
-  path=$(_path "$ns")
-  _lock_then "${path}.lock" _kvstore_nonatomic_mv "$path" "$key_from" "$key_to" "$val"
+  path=$(_kvstore_path "$ns")
+  _kvstore_lock_then "${path}.lock" _kvstore_nonatomic_mv "$path" "$key_from" "$key_to" "$val"
 }
 
 
@@ -237,8 +237,8 @@ kvstore_rm () {
     return 2
   fi
   local path
-  path=$(_path "$ns")
-  _lock_then "${path}.lock" _kvstore_nonatomic_rm "$path" "$key"
+  path=$(_kvstore_path "$ns")
+  _kvstore_lock_then "${path}.lock" _kvstore_nonatomic_rm "$path" "$key"
 }
 
 kvstore_shellinit() {
