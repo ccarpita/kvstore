@@ -70,7 +70,7 @@ _kvstore_lock_then () {
   elif type shlock &>/dev/null; then
     set -e
     shlock -f "$lockfile" -p $$
-    $cmd "$@"
+    "$cmd" "$@"
     rm -f "$lockfile"
     set +e
     return
@@ -118,7 +118,7 @@ _kvstore_each_file_kv () {
     IFS="$OLDIFS"
     local k=$(echo "$line" | cut -f1)
     local v=$(echo "$line" | cut -f2)
-    $cmd "$k" "$v" "$@"
+    "$cmd" "$k" "$v" "$@"
   done
 }
 
@@ -296,7 +296,12 @@ kvstore () {
     echo "kvstore -h to see usage" >&2
     return 1
   fi
+
   ## $2 is namespace, $3 is key, $4 is value
+  if [[ "$2" =~ \.lock$ ]]; then
+      echo "namespace cannot end in .lock, reserved for lock protocol"
+      return 1
+  fi
   case "$cmd" in
     -h|--help)
       kvstore_usage "$@"
