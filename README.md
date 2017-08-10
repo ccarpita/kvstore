@@ -21,7 +21,8 @@ eval "$(kvstore shellinit)"
 # Basic Usage
 
 ```
-$ kvstore set mykvfile key some_value
+$ kvstore set mykvfile akey some_value
+$ kvstore set mykvfile "another key" "some value67"
 
 $ kvstore ls
 mykvfile
@@ -29,15 +30,20 @@ myotherkvfile
 urls
 favoritecommands
 
-$ kvstore ls mykvfile
-key
+$ kvstore keys mykvfile
+akey
+another key
 
-$ kvstore get key
+$ kvstore get mykvfile akey
 some_value
 
 $ kvstore -h
 # prints full usage info...
 ```
-# LICENSE
+# Version
+
+This is version 2.0 with an incompatible interface change from previous versions: the `ls <namespace>` command to list all keys and `lsval <namespace>` command to list all values are replaced by the commands `keys <namespace>` and `vals <namespace>`, respectively.
+
+# License
 
 MIT - https://opensource.org/licenses/MIT
