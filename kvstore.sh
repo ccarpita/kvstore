@@ -7,15 +7,16 @@ kvstore_usage () {
   fi
   echo "kvstore <command> [<namespace>] [arguments...]"
   echo "kvstore [-h|--help]"
+  echo "kvstore [-v|--version]"
   echo
   echo "Interface for a file-based transactional kv store"
   echo
   echo "Commands:"
   echo "  ls"
   echo "    List kv stores (namespaces)"
-  echo "  ls <namespace>"
+  echo "  keys <namespace>"
   echo "    List keys in a namespace"
-  echo "  lsval <namespace>"
+  echo "  vals <namespace>"
   echo "    List values in a namespace"
   echo "  get <namespace> <key>"
   echo "    Get value of key"
@@ -34,6 +35,8 @@ kvstore_usage () {
   echo "  For command completion, add the following to your shell profile:"
   echo "  # File: Shell Profile"
   echo "  \$(kvstore shellinit)"
+  echo
+  echo "Version - 2.0"
 }
 
 _kvstore_path () {
@@ -149,28 +152,32 @@ _kvstore_nonatomic_rm () {
 }
 
 kvstore_ls () {
-  local cutarg='-f1'
-  if [[ "$1" = '--val' ]]
-  then
-    cutarg='-f2'
-    shift
-  fi
-  local ns="$1"
   local dir
   dir=$(_kvstore_path)
-  if [[ -z "$ns" ]]; then
-    for file in $dir/*; do
-      basename "$file"
-    done
-  else
-    local path
-    path=$(_kvstore_path "$ns")
-    if [[ ! -f "$path" ]]; then
-      echo "Error: path not found: $path" >&2
-      return 2
-    fi
-    cut $cutarg < "$path"
+  for file in $dir/*; do
+    basename "$file"
+  done
+}
+
+_kvstore_get_either () {
+  local cutarg=$1; shift
+  local ns="$1"
+  [[ -z "$ns" ]] && echo "Missing param: namespace" >&2 && return 1
+  local path
+  path=$(_kvstore_path "$ns")
+  if [[ ! -f "$path" ]]; then
+    echo "Error: path not found: $path" >&2
+    return 2
   fi
+  cut $cutarg < "$path"
+}
+
+kvstore_keys () {
+  _kvstore_get_either -f1 "$@"
+}
+
+kvstore_vals () {
+  _kvstore_get_either -f2 "$@"
 }
 
 kvstore_get () {
@@ -294,12 +301,20 @@ kvstore () {
       kvstore_usage "$@"
       return 0
       ;;
+    -v|--version)
+      echo 2.0
+      return 0
+      ;;
     ls)
       kvstore_ls "$2"
       return $?
       ;;
-    lsval)
-      kvstore_ls --val "$2"
+    keys)
+      kvstore_keys "$2"
+      return $?
+      ;;
+    vals)
+      kvstore_vals "$2"
       return $?
       ;;
     get)
@@ -331,3 +346,9 @@ kvstore () {
 }
 kvstore "$@"
 exit $?
+
+## for emacs...
+## Local Variables:
+## sh-basic-offset: 2
+## sh-indentation: 2
+## End:
