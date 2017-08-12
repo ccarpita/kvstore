@@ -7,15 +7,16 @@ kvstore_usage () {
   fi
   echo "kvstore <command> [<namespace>] [arguments...]"
   echo "kvstore [-h|--help]"
+  echo "kvstore [-v|--version]"
   echo
   echo "Interface for a file-based transactional kv store"
   echo
   echo "Commands:"
   echo "  ls"
   echo "    List kv stores (namespaces)"
-  echo "  ls <namespace>"
+  echo "  keys <namespace>"
   echo "    List keys in a namespace"
-  echo "  lsval <namespace>"
+  echo "  vals <namespace>"
   echo "    List values in a namespace"
   echo "  get <namespace> <key>"
   echo "    Get value of key"
@@ -34,9 +35,11 @@ kvstore_usage () {
   echo "  For command completion, add the following to your shell profile:"
   echo "  # File: Shell Profile"
   echo "  \$(kvstore shellinit)"
+  echo
+  echo "Version - 2.0"
 }
 
-_path () {
+_kvstore_path () {
   local file="$1"
   local dir="${KVSTORE_DIR:-$HOME/.kvstore}"
   mkdir -p "$dir"
@@ -47,7 +50,7 @@ _path () {
   fi
 }
 
-_lock_then () {
+_kvstore_lock_then () {
   local lockfile="$1"
   local cmd="$2"
   shift
@@ -67,7 +70,7 @@ _lock_then () {
   elif type shlock &>/dev/null; then
     set -e
     shlock -f "$lockfile" -p $$
-    $cmd "$@"
+    "$cmd" "$@"
     rm -f "$lockfile"
     set +e
     return
@@ -77,7 +80,7 @@ _lock_then () {
   return 1
 }
 
-_echo_v_if_k_match() {
+_kvstore_echo_v_if_k_match() {
   local k="$1"
   local v="$2"
   local key="$3"
@@ -87,7 +90,7 @@ _echo_v_if_k_match() {
   fi
 }
 
-_echo_kv () {
+_kvstore_echo_kv () {
   local k="$1"
   local v="$2"
   echo -n "$k"
@@ -95,16 +98,16 @@ _echo_kv () {
   echo "$v"
 }
 
-_echo_kv_if_k_nomatch() {
+_kvstore_echo_kv_if_k_nomatch() {
   local k="$1"
   local v="$2"
   local key="$3"
   if [[ "$k" != "$key" ]]; then
-    _echo_kv "$k" "$v"
+    _kvstore_echo_kv "$k" "$v"
   fi
 }
 
-_each_file_kv () {
+_kvstore_each_file_kv () {
   local file="$1"
   local cmd="$2"
   shift
@@ -115,7 +118,7 @@ _each_file_kv () {
     IFS="$OLDIFS"
     local k=$(echo "$line" | cut -f1)
     local v=$(echo "$line" | cut -f2)
-    $cmd "$k" "$v" "$@"
+    "$cmd" "$k" "$v" "$@"
   done
 }
 
@@ -125,8 +128,8 @@ _kvstore_nonatomic_mv () {
   local key_to="$3"
   local val="$4"
   local tmp="${path}.tmp"
-  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key_from" > "$tmp"
-  _echo_kv "$key_to" "$val" >> "$tmp"
+  _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key_from" > "$tmp"
+  _kvstore_echo_kv "$key_to" "$val" >> "$tmp"
   mv -f "$tmp" "$path"
 }
 
@@ -135,8 +138,8 @@ _kvstore_nonatomic_set () {
   local key="$2"
   local val="$3"
   local tmp="${path}.tmp"
-  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key" > "$tmp"
-  _echo_kv "$key" "$val" >> "$tmp"
+  _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key" > "$tmp"
+  _kvstore_echo_kv "$key" "$val" >> "$tmp"
   mv -f "$tmp" "$path"
 }
 
@@ -144,33 +147,37 @@ _kvstore_nonatomic_rm () {
   local path="$1"
   local key="$2"
   local tmp="${path}.tmp"
-  _each_file_kv "$path" _echo_kv_if_k_nomatch "$key" > "$tmp"
+  _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key" > "$tmp"
   mv -f "$tmp" "$path"
 }
 
 kvstore_ls () {
-  local cutarg='-f1'
-  if [[ "$1" = '--val' ]]
-  then
-    cutarg='-f2'
-    shift
-  fi
-  local ns="$1"
   local dir
-  dir=$(_path)
-  if [[ -z "$ns" ]]; then
-    for file in $dir/*; do
-      basename "$file"
-    done
-  else
-    local path
-    path=$(_path "$ns")
-    if [[ ! -f "$path" ]]; then
-      echo "Error: path not found: $path" >&2
-      return 2
-    fi
-    cut $cutarg < "$path"
+  dir=$(_kvstore_path)
+  for file in $dir/*; do
+    ! [[ "$file" =~ \.lock$ ]] && basename "$file"
+  done
+}
+
+_kvstore_get_either () {
+  local cutarg=$1; shift
+  local ns="$1"
+  [[ -z "$ns" ]] && echo "Missing param: namespace" >&2 && return 1
+  local path
+  path=$(_kvstore_path "$ns")
+  if [[ ! -f "$path" ]]; then
+    echo "Error: path not found: $path" >&2
+    return 2
   fi
+  cut $cutarg < "$path"
+}
+
+kvstore_keys () {
+  _kvstore_get_either -f1 "$@"
+}
+
+kvstore_vals () {
+  _kvstore_get_either -f2 "$@"
 }
 
 kvstore_get () {
@@ -179,13 +186,13 @@ kvstore_get () {
   local key="$2"
   [[ -z "$key" ]] && echo "Missing param: key" >&2 && return 1
   local file
-  file=$(_path "$ns")
+  file=$(_kvstore_path "$ns")
   if [[ ! -f "$file" ]]; then
     echo "Error: namespace file not found: $ns" >&2
     return 2
   fi
   found=0
-  _each_file_kv "$file" _echo_v_if_k_match "$key"
+  _kvstore_each_file_kv "$file" _kvstore_echo_v_if_k_match "$key"
   if (( found == 0 )); then
     echo "Error: key not found in namespace $ns: $key" >&2
     return 1
@@ -200,9 +207,9 @@ kvstore_set () {
   local val="$3"
   [[ -z "$val" ]] && echo "Missing param: value" >&2 && return 1
   local path
-  path=$(_path "$ns")
+  path=$(_kvstore_path "$ns")
   touch "$path"
-  _lock_then "${path}.lock" _kvstore_nonatomic_set "$path" "$key" "$val"
+  _kvstore_lock_then "${path}.lock" _kvstore_nonatomic_set "$path" "$key" "$val"
   return $?
 }
 
@@ -223,8 +230,8 @@ kvstore_mv () {
     return 3
   fi
   local path
-  path=$(_path "$ns")
-  _lock_then "${path}.lock" _kvstore_nonatomic_mv "$path" "$key_from" "$key_to" "$val"
+  path=$(_kvstore_path "$ns")
+  _kvstore_lock_then "${path}.lock" _kvstore_nonatomic_mv "$path" "$key_from" "$key_to" "$val"
 }
 
 
@@ -237,8 +244,8 @@ kvstore_rm () {
     return 2
   fi
   local path
-  path=$(_path "$ns")
-  _lock_then "${path}.lock" _kvstore_nonatomic_rm "$path" "$key"
+  path=$(_kvstore_path "$ns")
+  _kvstore_lock_then "${path}.lock" _kvstore_nonatomic_rm "$path" "$key"
 }
 
 kvstore_shellinit() {
@@ -289,17 +296,31 @@ kvstore () {
     echo "kvstore -h to see usage" >&2
     return 1
   fi
+
+  ## $2 is namespace, $3 is key, $4 is value
+  if [[ "$2" =~ \.lock$ ]]; then
+      echo "namespace cannot end in .lock, reserved for lock protocol"
+      return 1
+  fi
   case "$cmd" in
     -h|--help)
       kvstore_usage "$@"
+      return 0
+      ;;
+    -v|--version)
+      echo 2.0
       return 0
       ;;
     ls)
       kvstore_ls "$2"
       return $?
       ;;
-    lsval)
-      kvstore_ls --val "$2"
+    keys)
+      kvstore_keys "$2"
+      return $?
+      ;;
+    vals)
+      kvstore_vals "$2"
       return $?
       ;;
     get)
