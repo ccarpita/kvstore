@@ -51,7 +51,7 @@ kvstore_usage () {
   echo "  # File: Shell Profile"
   echo "  \$(kvstore shellinit)"
   echo
-  echo "Version - 3.0"
+  echo "Version - 2.1"
 }
 
 _kvstore_path () {
@@ -323,7 +323,8 @@ kvstore_drop () {
   local ns="$1"
   [[ -z "$ns" ]] && echo "Missing param: namespace" >&2 && return 1
   path=$(_kvstore_path "$ns")
-  \rm ${path}
+  command rm ${path} ## 'command' avoids any aliases or shell functions defined
+                     ## by the user.
   local status=$?
   if((status==0))
   then
