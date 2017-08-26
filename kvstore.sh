@@ -13,30 +13,45 @@ kvstore_usage () {
   echo
   echo "Commands:"
   echo "  ls"
-  echo "    List kv stores (namespaces)"
+  echo "    List kv stores (namespaces)."
+  echo "  lsinfo"
+  echo "    List kv stores (namespaces) and other information."
   echo "  keys <namespace>"
-  echo "    List keys in a namespace"
+  echo "    List keys in a namespace."
   echo "  vals <namespace>"
-  echo "    List values in a namespace"
+  echo "    List values in a namespace."
+  echo "  dump <namespace> [-v]"
+  echo "    List key/values pairs in a namespace. -v prints the"
+  echo "    namespace as a heading."
   echo "  get <namespace> <key>"
-  echo "    Get value of key"
+  echo "    Get value of key."
   echo "  set <namespace> <key> <value>"
-  echo "    Set value of key"
+  echo "    Set value of key."
   echo "  rm <namespace> <key>"
-  echo "    Remove key from store"
+  echo "    Remove key from store."
   echo "  mv <namespace> <from_key> <to_key>"
-  echo "    Move (rename) key.  Fails if the destination key already exists"
+  echo "    Move (rename) key.  Fails if the destination key already exists."
+  echo "  drop <namespace>"
+  echo "    Delete the namespace file."
+  echo "  load"
+  echo "    Used in conjunction with sourcing the file in:"
+  echo "     . \$PATH/TO/kvstore.sh load "
+  echo "    or "
+  echo "     source \$PATH/TO/kvstore.sh load"
+  echo "    Tells the kvstore call at the end of the script not to do anything"
+  echo "    because we are loading all the functions into memory for faster"
+  echo "    execution later on. Add one of the above to your shell profile."
   echo
   echo "Environmental Variables:"
   echo "  KVSTORE_DIR"
-  echo "    Directory where file stores will be kept, defaults to \$HOME/.kvstore"
+  echo "    Directory where file stores will be kept, defaults to '\$HOME/.kvstore'."
   echo
   echo "Shell Initialization"
   echo "  For command completion, add the following to your shell profile:"
   echo "  # File: Shell Profile"
   echo "  \$(kvstore shellinit)"
   echo
-  echo "Version - 2.0"
+  echo "Version - 2.1"
 }
 
 _kvstore_path () {
@@ -156,6 +171,21 @@ kvstore_ls () {
   dir=$(_kvstore_path)
   for file in $dir/*; do
     ! [[ "$file" =~ \.lock$ ]] && basename "$file"
+  done
+}
+
+kvstore_lsinfo () {
+  local dir
+  dir=$(_kvstore_path)
+  for file in $dir/*; do
+    if ! [[ "$file" =~ \.lock$ ]];then
+      basename "$file"
+      printf '    entries:%5d' $(cat "$file" | wc -l)
+      if type stat &>/dev/null; then
+        stat --printf=' bytes: %5s Last updated:%y' "$file"
+      fi
+      echo
+    fi
   done
 }
 
@@ -289,6 +319,29 @@ complete -F _${ns}_kvstore_complete $cmd"
   fi
 }
 
+kvstore_drop () {
+  local ns="$1"
+  [[ -z "$ns" ]] && echo "Missing param: namespace" >&2 && return 1
+  path=$(_kvstore_path "$ns")
+  command rm ${path} ## 'command' avoids any aliases or shell functions defined
+                     ## by the user.
+  local status=$?
+  if((status==0))
+  then
+    \rm -rf "${path}.lock"
+  fi
+  return $status
+}
+
+kvstore_dump () {
+  local ns="$1"
+  [[ -z "$ns" ]] && echo "Missing param: namespace" >&2 && return 1
+  [[ "$2" = '-v' ]] && echo $(basename $ns):
+  path=$(_kvstore_path "$ns")
+  cat ${path}
+  return $?
+}
+
 kvstore () {
   local cmd="$1"
   if [[ -z "$cmd" ]]; then
@@ -299,8 +352,8 @@ kvstore () {
 
   ## $2 is namespace, $3 is key, $4 is value
   if [[ "$2" =~ \.lock$ ]]; then
-      echo "namespace cannot end in .lock, reserved for lock protocol"
-      return 1
+    echo "namespace cannot end in .lock, reserved for lock protocol"
+    return 1
   fi
   case "$cmd" in
     -h|--help)
@@ -313,6 +366,10 @@ kvstore () {
       ;;
     ls)
       kvstore_ls "$2"
+      return $?
+      ;;
+    lsinfo)
+      kvstore_lsinfo "$2"
       return $?
       ;;
     keys)
@@ -343,6 +400,16 @@ kvstore () {
       kvstore_shellinit "$2"
       return 0
       ;;
+    drop)
+      kvstore_drop "$2"
+      return $?
+      ;;
+    dump)
+      kvstore_dump "$2"
+      return $?
+    load)
+      return 0 ## Do nothing if loading.
+      ;;
     *)
       echo "Error: Unrecognized command: $cmd" >&2
       echo "kvstore -h to see usage" >&2
@@ -351,4 +418,4 @@ kvstore () {
   esac
 }
 kvstore "$@"
-exit $?
+[[ "$1" != 'load' ]] && exit $?
