@@ -1,0 +1,290 @@
+=== tout.004 ===
+val1
+
+=== tout.007 ===
+val3 with spaces
+
+=== tout.009 ===
+val12
+
+=== tout.012 ===
+val32 with spaces
+
+=== tout.013 ===
+teststore1_script
+teststore2_script
+
+=== tout.014 ===
+teststore1_script
+    entries:    3 bytes:    54 Last updated:2017-10-21 00:51:34.129136000 -0400
+teststore2_script
+    entries:    3 bytes:    60 Last updated:2017-10-21 00:51:35.440416600 -0400
+
+=== tout.015 ===
+key1
+key2
+key3 with spaces
+
+=== tout.016 ===
+val1
+val2
+val3 with spaces
+
+=== tout.017 ===
+"key1"=>"val1"
+"key2"=>"val2"
+"key3 with spaces"=>"val3 with spaces"
+
+=== tout.018 ===
+teststore1_script:
+"key1"=>"val1"
+"key2"=>"val2"
+"key3 with spaces"=>"val3 with spaces"
+
+=== tout.019 ===
+key1	val1
+key2	val2
+key3 with spaces	val3 with spaces
+
+=== tout.020 ===
+teststore1_script:
+key1	val1
+key2	val2
+key3 with spaces	val3 with spaces
+
+=== tout.021 ===
+key12
+key22
+key32 with spaces
+
+=== tout.022 ===
+val12
+val22
+val32 with spaces
+
+=== tout.023 ===
+"key12"=>"val12"
+"key22"=>"val22"
+"key32 with spaces"=>"val32 with spaces"
+
+=== tout.024 ===
+teststore2_script:
+"key12"=>"val12"
+"key22"=>"val22"
+"key32 with spaces"=>"val32 with spaces"
+
+=== tout.025 ===
+key12	val12
+key22	val22
+key32 with spaces	val32 with spaces
+
+=== tout.026 ===
+teststore2_script:
+key12	val12
+key22	val22
+key32 with spaces	val32 with spaces
+
+=== tout.028 ===
+key2	val2
+key3 with spaces	val3 with spaces
+
+=== tout.030 ===
+key22	val22
+key32 with spaces	val32 with spaces
+key122	val12
+
+=== terr.031 ===
+Error: destination key already exists: key22
+
+=== tout.032 ===
+key22	val22
+key32 with spaces	val32 with spaces
+key122	val12
+
+=== terr.033 ===
+Error: destination key already exists: key22
+
+=== tout.034 ===
+key22	val22
+key32 with spaces	val32 with spaces
+key122	val12
+
+=== tout.036 ===
+key32 with spaces	val32 with spaces
+key122	val12
+
+=== tout.038 ===
+teststore2_script
+
+=== terr.039 ===
+rm: cannot remove '/tmp/tmp.kCzstXmPvD/store/teststore1_script': No such file or directory
+
+=== tout.040 ===
+teststore2_script
+
+=== tout.041 ===
+Warning: it looks like you are just running
+         the /home/Matthew/gits/github/matthewpersico/kvstore/wt/v4.0/kvstore.sh script and not sourcing it
+         into the environment. The correct
+         usage for the load command is
+
+         . /home/Matthew/gits/github/matthewpersico/kvstore/wt/v4.0/kvstore.sh load
+
+
+=== tout.043 ===
+declare -f _kvstore_each_file_kv
+declare -f _kvstore_echo_kv
+declare -f _kvstore_echo_kv_if_k_nomatch
+declare -f _kvstore_echo_v_if_k_match
+declare -f _kvstore_get_either
+declare -f _kvstore_lock_then
+declare -f _kvstore_nonatomic_mv
+declare -f _kvstore_nonatomic_rm
+declare -f _kvstore_nonatomic_set
+declare -f _kvstore_ns_check
+declare -f _kvstore_path
+declare -f kvstore
+declare -f kvstore_drop
+declare -f kvstore_dump
+declare -f kvstore_get
+declare -f kvstore_keys
+declare -f kvstore_ls
+declare -f kvstore_lsinfo
+declare -f kvstore_mv
+declare -f kvstore_rm
+declare -f kvstore_set
+declare -f kvstore_shellinit
+declare -f kvstore_usage
+declare -f kvstore_vals
+
+=== tout.044 ===
+teststore2_script
+
+=== tout.046 ===
+val1
+
+=== tout.049 ===
+val3 with spaces
+
+=== tout.051 ===
+val12
+
+=== tout.054 ===
+val32 with spaces
+
+=== tout.055 ===
+teststore1_functions
+teststore2_functions
+teststore2_script
+
+=== tout.056 ===
+teststore1_functions
+    entries:    3 bytes:    54 Last updated:2017-10-21 00:51:43.708828800 -0400
+teststore2_functions
+    entries:    3 bytes:    60 Last updated:2017-10-21 00:51:44.709349800 -0400
+teststore2_script
+    entries:    2 bytes:    49 Last updated:2017-10-21 00:51:42.153712600 -0400
+
+=== tout.057 ===
+key1
+key2
+key3 with spaces
+
+=== tout.058 ===
+val1
+val2
+val3 with spaces
+
+=== tout.059 ===
+"key1"=>"val1"
+"key2"=>"val2"
+"key3 with spaces"=>"val3 with spaces"
+
+=== tout.060 ===
+teststore1_functions:
+"key1"=>"val1"
+"key2"=>"val2"
+"key3 with spaces"=>"val3 with spaces"
+
+=== tout.061 ===
+key1	val1
+key2	val2
+key3 with spaces	val3 with spaces
+
+=== tout.062 ===
+teststore1_functions:
+key1	val1
+key2	val2
+key3 with spaces	val3 with spaces
+
+=== tout.063 ===
+key12
+key22
+key32 with spaces
+
+=== tout.064 ===
+val12
+val22
+val32 with spaces
+
+=== tout.065 ===
+"key12"=>"val12"
+"key22"=>"val22"
+"key32 with spaces"=>"val32 with spaces"
+
+=== tout.066 ===
+teststore2_functions:
+"key12"=>"val12"
+"key22"=>"val22"
+"key32 with spaces"=>"val32 with spaces"
+
+=== tout.067 ===
+key12	val12
+key22	val22
+key32 with spaces	val32 with spaces
+
+=== tout.068 ===
+teststore2_functions:
+key12	val12
+key22	val22
+key32 with spaces	val32 with spaces
+
+=== tout.070 ===
+key2	val2
+key3 with spaces	val3 with spaces
+
+=== tout.072 ===
+key22	val22
+key32 with spaces	val32 with spaces
+key122	val12
+
+=== terr.073 ===
+Error: destination key already exists: key22
+
+=== tout.074 ===
+key22	val22
+key32 with spaces	val32 with spaces
+key122	val12
+
+=== terr.075 ===
+Error: destination key already exists: key22
+
+=== tout.076 ===
+key22	val22
+key32 with spaces	val32 with spaces
+key122	val12
+
+=== tout.078 ===
+key32 with spaces	val32 with spaces
+key122	val12
+
+=== tout.080 ===
+teststore2_functions
+teststore2_script
+
+=== terr.081 ===
+rm: cannot remove '/tmp/tmp.kCzstXmPvD/store/teststore1_functions': No such file or directory
+
+=== tout.082 ===
+teststore2_functions
+teststore2_script
