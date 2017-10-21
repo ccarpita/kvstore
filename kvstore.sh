@@ -339,7 +339,7 @@ kvstore_shellinit() {
   fi
   #echo \"ns=\$ns,pos=\$pos,comp=\${COMP_WORDS[@]}\"
   if (( pos == $cpos )); then
-    COMPREPLY=( \$( compgen -W \"ls lsinfo keys vals dump get set rm mv drop load shellinit\" -- \$cw) )
+    COMPREPLY=( \$( compgen -W \"load ls list lsinfo keys vals get set rm mv shellinit drop dump\" -- \$cw) )
   else
     local OLDIFS=\$IFS
     IFS=\$'\\n'
