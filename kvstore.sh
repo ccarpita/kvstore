@@ -51,7 +51,7 @@ kvstore_usage () {
   echo "  # File: Shell Profile"
   echo "  \$(kvstore shellinit)"
   echo
-  echo "Version - 3.0"
+  echo "Version - 3.0.1"
   ## Make sure to sync with the version printed below for the -v option
 }
 
@@ -150,7 +150,7 @@ _kvstore_nonatomic_mv () {
   local key_from="$2"
   local key_to="$3"
   local val="$4"
-  local tmp="${path}.tmp.knmv"
+  local tmp="${path}.tmp.knmv.$$"
   _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key_from" > "$tmp"
   if ((force)); then
     _kvstore_nonatomic_rm "$tmp" "$key_to"
@@ -163,7 +163,7 @@ _kvstore_nonatomic_set () {
   local path="$1"
   local key="$2"
   local val="$3"
-  local tmp="${path}.tmp.knset"
+  local tmp="${path}.tmp.knset.$$"
   _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key" > "$tmp"
   _kvstore_echo_kv "$key" "$val" >> "$tmp"
   mv -f "$tmp" "$path"
@@ -172,7 +172,7 @@ _kvstore_nonatomic_set () {
 _kvstore_nonatomic_rm () {
   local path="$1"
   local key="$2"
-  local tmp="${path}.tmp.knrm"
+  local tmp="${path}.tmp.knrm.$$"
   _kvstore_each_file_kv "$path" _kvstore_echo_kv_if_k_nomatch "$key" > "$tmp"
   mv -f "$tmp" "$path"
 }
@@ -191,7 +191,8 @@ kvstore_lsinfo () {
   local dir
   dir=$(_kvstore_path)
   for file in $dir/*; do
-    if ! [[ "$file" =~ \.lock$ ]];then
+    if ! [[ "$file" =~ \.lock$ ]] && \
+        ! [[ "$file" =~ \.tmp\.k.*$ ]] ;then
       basename "$file"
       printf '    entries:%5d' $(cat "$file" | wc -l)
       if type stat &>/dev/null; then
