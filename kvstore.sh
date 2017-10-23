@@ -194,9 +194,9 @@ kvstore_lsinfo () {
     if ! [[ "$file" =~ \.lock$ ]] && \
         ! [[ "$file" =~ \.tmp\.k.*$ ]] ;then
       basename "$file"
-      printf '    entries:%5d' $(cat "$file" | wc -l)
+      printf '    entries:%-5d' $(cat "$file" | wc -l)
       if type stat &>/dev/null; then
-        stat --printf=' bytes: %5s Last updated:%y' "$file"
+        stat --printf=' bytes:%-5s Last updated:%y' "$file"
       fi
       echo
     fi
