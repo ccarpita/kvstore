@@ -51,7 +51,7 @@ kvstore_usage () {
   echo "  # File: Shell Profile"
   echo "  \$(kvstore shellinit)"
   echo
-  echo "Version - 3.0.1"
+  echo "Version - 3.0.2"
   ## Make sure to sync with the version printed below for the -v option
 }
 
@@ -435,7 +435,7 @@ kvstore () {
       return 0
       ;;
     -v|--version)
-      echo 3.0
+      echo 3.0.2
       ## Make sure to keep in sync with the version in the usage statement above.
       return 0
       ;;

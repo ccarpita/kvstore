@@ -42,7 +42,7 @@ $ kvstore -h
 ```
 # Version
 
-This is version 3.0.1. The 3.X version series has an incompatible interface change from the 2.X series: commands' options have been moved from the rear of the argument list to the front, as is custom in UNIX.
+This is version 3.0.2. The 3.X version series has an incompatible interface change from the 2.X series: commands' options have been moved from the rear of the argument list to the front, as is custom in UNIX.
 
 # License
 
