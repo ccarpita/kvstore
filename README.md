@@ -42,7 +42,7 @@ $ kvstore -h
 ```
 # Version
 
-This is version 2.0 with an incompatible interface change from previous versions: the `ls <namespace>` command to list all keys and `lsval <namespace>` command to list all values are replaced by the commands `keys <namespace>` and `vals <namespace>`, respectively.
+This is version 3.0. This version has an incompatible interface change from the 2.X series: commands' options have been moved from the rear of the argument list to the front, as is custom in UNIX.
 
 # License
 
